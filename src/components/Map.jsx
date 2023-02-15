@@ -19,6 +19,7 @@ export default function Map() {
   const [msg, setMsg] = useState("");
   const [qAbbreviation, setqAbbreviation] = useState(null);
   const [aAbbreviation, setaAbbreviation] = useState(null);
+  const [colorMap, setColorMap] = useState({});
 
   const shuffle = ([...array]) => {
     for (let i = array.length - 1; i >= 0; i--) {
@@ -43,9 +44,9 @@ export default function Map() {
     if (ongoing) {
       const guessAbbreviation = e.target.dataset.name;
       setaAbbreviation(guessAbbreviation);
-      const ansName = quizArray[condition.progNum].attributes.name;
+      const qName = quizArray[condition.progNum].attributes.name;
       if (guessAbbreviation === qAbbreviation) {
-        setMsg(`You Got It Right! It was ${ansName}.`);
+        setMsg(`You Got It Right! It was ${qName}.`);
         const nextProgNum = progNum + 1;
         if (failed)
           setCondition({ ...condition, failed: false, progNum: nextProgNum });
@@ -61,6 +62,10 @@ export default function Map() {
         if (!failed) {
           setCondition({ ...condition, falseCnt: falseCnt + 1, failed: true });
         }
+        const newColorMap = colorMap;
+        newColorMap[guessAbbreviation] = { fill: "#000" };
+        setColorMap(newColorMap);
+        console.log(newColorMap);
       }
     }
   };
@@ -72,23 +77,17 @@ export default function Map() {
   return (
     <div>
       <h1>react-map-usa</h1>
-      <USAMap onClick={mapHandler} />
+      <USAMap customize={colorMap} onClick={mapHandler} />
       <br></br>
       {condition.ongoing && qAbbreviation ? (
-        <img
-          src={`/images/highway/highway_${qAbbreviation}.PNG`}
-          alt="quizImage"
-        />
+        <img src={`/images/highway/${qAbbreviation}.PNG`} alt="quizImage" />
       ) : (
         "waiting to start"
       )}
       <br></br>
       {msg}
       {condition.ongoing && aAbbreviation ? (
-        <img
-          src={`/images/highway/highway_${aAbbreviation}.PNG`}
-          alt="quizImage"
-        />
+        <img src={`/images/highway/${aAbbreviation}.PNG`} alt="quizImage" />
       ) : (
         ""
       )}
