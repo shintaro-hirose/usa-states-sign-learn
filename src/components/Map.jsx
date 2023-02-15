@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import USAMap from "react-usa-map";
 import statesJson from "../states.json";
 import { highwayGroup } from "../util/highwayGroup";
@@ -7,20 +7,20 @@ import Button from "@mui/material/Button";
 
 export default function Map() {
   const states = statesJson.data;
-  const [condition, setCondition] = useState({
+  const defaultCondition = {
     ongoing: false,
-    end: false,
     correctCnt: 0,
     falseCnt: 0,
-    failed: false,
-    quizMode: null
-  });
+    failed: false
+  };
+  const [condition, setCondition] = useState(defaultCondition);
   const [quizArray, setQuizArray] = useState(states);
   const [msg, setMsg] = useState("");
   const [qAbbreviation, setqAbbreviation] = useState(null);
-  const [aAbbreviation, setaAbbreviation] = useState(null);
   const [colorMap, setColorMap] = useState({});
+  const [memoColorMap, setMemoColorMap] = useState({});
   const [progNum, setProgNum] = useState(0);
+  const [count, setCount] = useState(0);
 
   const shuffle = ([...array]) => {
     for (let i = array.length - 1; i >= 0; i--) {
@@ -30,10 +30,25 @@ export default function Map() {
     return array;
   };
 
+  const intervalRef = useRef(null);
+  const startCount = useCallback(() => {
+    if (intervalRef.current !== null) {
+      return;
+    }
+    intervalRef.current = setInterval(() => {
+      setCount((c) => c + 0.1);
+    }, 100);
+  }, []);
+  const stopCount = useCallback(() => {
+    if (intervalRef.current === null) {
+      return;
+    }
+    clearInterval(intervalRef.current);
+    intervalRef.current = null;
+  }, []);
   useEffect(() => {
     setQuizArray((quizArray) => shuffle(quizArray));
-    console.log("shuffled");
-  }, [condition.end]);
+  }, []);
 
   useEffect(() => {
     setqAbbreviation(quizArray[progNum].attributes.abbreviation);
@@ -68,27 +83,53 @@ export default function Map() {
     return filled;
   };
 
-  const endQuiz = () => {
-    // TODO end task
+  const startSession = () => {
+    stopCount();
+    setCount(0);
+    setMsg("");
+    setColorMap({});
+    setProgNum(0);
+    setCondition({ ...defaultCondition, ongoing: true });
+    startCount();
   };
+
+  const resetSession = () => {
+    stopCount();
+    setCount(0);
+    setMsg("");
+    setColorMap({});
+    setProgNum(0);
+    setCondition({ defaultCondition });
+    setQuizArray((quizArray) => shuffle(quizArray));
+  };
+
+  const endSession = () => {
+    stopCount();
+    setCondition((condition) => ({
+      ...condition,
+      ongoing: false,
+      failed: false
+    }));
+    setQuizArray((quizArray) => shuffle(quizArray));
+  };
+
   const goNextOrEnd = () => {
     let nextProgNum = progNum + 1;
     if (nextProgNum === 50) {
       nextProgNum = 0;
-      endQuiz();
+      endSession();
     }
     setProgNum(nextProgNum);
   };
 
-  const mapHandler = (e) => {
+  const onMapClick = (e) => {
     const { ongoing, end, correctCnt, falseCnt, failed } = condition;
     if (end) return;
     if (ongoing) {
       const guessAbbreviation = e.target.dataset.name;
-      setaAbbreviation(guessAbbreviation);
       if (fillWhenCorrect(guessAbbreviation, failed)) {
-        setMsg("You Got It Right!");
-        goNextOrEnd();
+        setMsg(`It was ${quizArray[progNum].attributes.name}`);
+
         if (failed) setCondition({ ...condition, failed: false });
         else {
           setCondition({
@@ -96,53 +137,50 @@ export default function Map() {
             correctCnt: correctCnt + 1
           });
         }
+        goNextOrEnd();
       } else {
-        setMsg(`Not Correct! That State Uses This Sign. Try Again.`);
+        setMsg(`${guessAbbreviation} Not Correct!`);
         if (!failed) {
           setCondition({ ...condition, falseCnt: falseCnt + 1, failed: true });
         }
       }
     }
   };
+
   const onSkip = () => {
     if (condition.ongoing) {
       fillWhenCorrect(qAbbreviation, true);
-      const tmsg = `The answer was ${quizArray[progNum].attributes.name}`;
+      const tmsg = `It was ${quizArray[progNum].attributes.name}`;
       setMsg(tmsg);
-      setaAbbreviation(qAbbreviation);
       const newFalseCnt = condition.falseCnt + 1;
-      setCondition({ ...condition, falseCnt: newFalseCnt, failed: false });
+      setCondition((condition) => ({
+        ...condition,
+        falseCnt: newFalseCnt,
+        failed: false
+      }));
       goNextOrEnd();
     }
   };
 
-  const startSession = () => {
-    setCondition({ ...condition, ongoing: true, progNum: 0, end: false });
-  };
-
   return (
     <div>
-      <h1>react-map-usa</h1>
-      <USAMap customize={colorMap} onClick={mapHandler} />
-      <br></br>
       {condition.ongoing && qAbbreviation ? (
         <img src={`/images/highway/${qAbbreviation}.PNG`} alt="quizImage" />
       ) : (
         "waiting to start"
       )}
-      <br></br>
-      {msg}
-      {condition.ongoing && aAbbreviation ? (
-        <img src={`/images/highway/${aAbbreviation}.PNG`} alt="quizImage" />
+      {condition.ongoing ? (
+        <Button onClick={resetSession}>Reset</Button>
       ) : (
-        ""
+        <Button onClick={startSession}>Start</Button>
       )}
+      {condition.ongoing ? <Button onClick={onSkip}>Skip</Button> : ""}
+      {msg}
+      <USAMap customize={colorMap} onClick={onMapClick} />
       <br></br>
       {`Correct: ${condition.correctCnt}`}
       {`Missed: ${condition.falseCnt}`}
-      <br></br>
-      <Button onClick={startSession}>Start</Button>
-      <Button onClick={onSkip}>Skip</Button>
+      {`Time: ${count.toFixed(1)} s`}
     </div>
   );
 }
