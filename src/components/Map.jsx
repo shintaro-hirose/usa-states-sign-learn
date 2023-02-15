@@ -3,9 +3,62 @@ import USAMap from "react-usa-map";
 import statesJson from "../states.json";
 import { highwayGroup } from "../util/highwayGroup";
 
+import { styled } from "@mui/material/styles";
 import Button from "@mui/material/Button";
+import Box from "@mui/material/Box";
+import Paper from "@mui/material/Paper";
+import Grid from "@mui/material/Unstable_Grid2";
+import Typography from "@mui/material/Typography";
 
 // http://www.worldlicenseplates.com/usa/US_USAX.html
+
+const MyPaper = styled(Paper)(({ theme }) => ({
+  backgroundColor: "#fff",
+  ...theme.typography.body2,
+  padding: theme.spacing(1),
+  textAlign: "center",
+  color: theme.palette.text.secondary,
+  height: "200px",
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "center"
+}));
+
+const BoxButton = styled(Box)(({ theme }) => ({
+  backgroundColor: "#4db6ac",
+  ...theme.typography.h5,
+  padding: theme.spacing(1),
+  margin: theme.spacing(1),
+  display: "flex",
+  justifyContent: "center",
+  alignItems: "center",
+  color: theme.palette.text.secondary,
+  height: "100%",
+  cursor: "pointer",
+  "&:hover": {
+    backgroundColor: "#80cbc4",
+    borderColor: "#0062cc",
+    boxShadow: "none"
+  }
+}));
+
+const BoxButtonSub = styled(BoxButton)(({ theme }) => ({
+  backgroundColor: "#e57373",
+  "&:hover": {
+    backgroundColor: "#ef9a9a",
+    borderColor: "#0062cc",
+    boxShadow: "none"
+  }
+}));
+
+const BoxButtonSub2 = styled(BoxButton)(({ theme }) => ({
+  backgroundColor: "#F4D03F",
+  "&:hover": {
+    backgroundColor: "#fff176",
+    borderColor: "#0062cc",
+    boxShadow: "none"
+  }
+}));
 
 export default function Map() {
   const states = statesJson.data;
@@ -22,6 +75,7 @@ export default function Map() {
   const [colorMap, setColorMap] = useState({});
   const [progNum, setProgNum] = useState(0);
   const [count, setCount] = useState(0);
+  const [quizMode, setQuizMode] = useState(null);
 
   const shuffle = ([...array]) => {
     for (let i = array.length - 1; i >= 0; i--) {
@@ -47,9 +101,10 @@ export default function Map() {
     clearInterval(intervalRef.current);
     intervalRef.current = null;
   }, []);
-  // useEffect(() => {
-  //   setQuizArray((quizArray) => shuffle(quizArray));
-  // }, []);
+
+  useEffect(() => {
+    setQuizArray((quizArray) => shuffle(quizArray));
+  }, []);
 
   useEffect(() => {
     setqAbbreviation(quizArray[progNum].attributes.abbreviation);
@@ -63,16 +118,18 @@ export default function Map() {
     let correct = false;
     let newColorMap = colorMap;
 
-    highwayGroup.forEach((group) => {
-      if (group.includes(guess)) {
-        if (group.includes(qAbbreviation)) {
-          correct = true;
-          group.forEach((st) => {
-            newColorMap[st] = { fill: fillColor };
-          });
+    if (quizMode === 1) {
+      highwayGroup.forEach((group) => {
+        if (group.includes(guess)) {
+          if (group.includes(qAbbreviation)) {
+            correct = true;
+            group.forEach((st) => {
+              newColorMap[st] = { fill: fillColor };
+            });
+          }
         }
-      }
-    });
+      });
+    }
 
     if (!correct) {
       if (guess === qAbbreviation) {
@@ -163,32 +220,68 @@ export default function Map() {
     }
   };
 
+  const startHighway = () => {
+    setQuizMode(1);
+    startSession();
+  };
+
+  const startLicense = () => {
+    setQuizMode(2);
+    startSession();
+  };
+
   return (
     <div>
-      {condition.ongoing && qAbbreviation ? (
-        <div>
-          <img src={`/images/highway/${qAbbreviation}.PNG`} alt="quizImage" />
-          <img
-            src={`/images/license-plate/${qAbbreviation}.PNG`}
-            alt="quizImage"
-            className="blur"
-          />
-        </div>
-      ) : (
-        "waiting to start"
-      )}
-      {condition.ongoing ? (
-        <Button onClick={resetSession}>Reset</Button>
-      ) : (
-        <Button onClick={startSession}>Start</Button>
-      )}
-      {condition.ongoing ? <Button onClick={onSkip}>Skip</Button> : ""}
-      {msg}
+      <Typography variant="h3">US 50 states Sign/Plate Quiz</Typography>
+      <Box sx={{ flexGrow: 1 }}>
+        <Grid container spacing={2}>
+          <Grid xs={4}>
+            {condition.ongoing && qAbbreviation ? (
+              <MyPaper>
+                <BoxButtonSub onClick={resetSession}>Reset</BoxButtonSub>
+                <BoxButtonSub2 onClick={onSkip}>Show Answer</BoxButtonSub2>
+              </MyPaper>
+            ) : (
+              <MyPaper>
+                <BoxButton onClick={startHighway}>Highway Sign</BoxButton>
+                <BoxButton onClick={startLicense}>License Plate</BoxButton>
+              </MyPaper>
+            )}
+          </Grid>
+          <Grid xs={4}>
+            <MyPaper>
+              {condition.ongoing && qAbbreviation ? (
+                quizMode === 1 ? (
+                  <img
+                    src={`/images/highway/${qAbbreviation}.PNG`}
+                    alt="quizImage"
+                  />
+                ) : quizMode === 2 ? (
+                  <img
+                    src={`/images/license-plate/${qAbbreviation}.PNG`}
+                    alt="quizImage"
+                    className="blur"
+                  />
+                ) : (
+                  ""
+                )
+              ) : (
+                "waiting to start"
+              )}
+            </MyPaper>
+          </Grid>
+          <Grid xs={4}>
+            <MyPaper>
+              <Typography>Correct: {condition.correctCnt}</Typography>
+              <Typography>Missed: {condition.falseCnt}</Typography>
+              <Typography>Time: {count.toFixed(1)} s</Typography>
+            </MyPaper>
+          </Grid>
+        </Grid>
+      </Box>
+
+      {/* {msg} */}
       <USAMap customize={colorMap} onClick={onMapClick} />
-      <br></br>
-      {`Correct: ${condition.correctCnt}`}
-      {`Missed: ${condition.falseCnt}`}
-      {`Time: ${count.toFixed(1)} s`}
     </div>
   );
 }
