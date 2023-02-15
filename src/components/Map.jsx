@@ -5,6 +5,8 @@ import { highwayGroup } from "../util/highwayGroup";
 
 import Button from "@mui/material/Button";
 
+// http://www.worldlicenseplates.com/usa/US_USAX.html
+
 export default function Map() {
   const states = statesJson.data;
   const defaultCondition = {
@@ -45,9 +47,9 @@ export default function Map() {
     clearInterval(intervalRef.current);
     intervalRef.current = null;
   }, []);
-  useEffect(() => {
-    setQuizArray((quizArray) => shuffle(quizArray));
-  }, []);
+  // useEffect(() => {
+  //   setQuizArray((quizArray) => shuffle(quizArray));
+  // }, []);
 
   useEffect(() => {
     setqAbbreviation(quizArray[progNum].attributes.abbreviation);
@@ -164,7 +166,14 @@ export default function Map() {
   return (
     <div>
       {condition.ongoing && qAbbreviation ? (
-        <img src={`/images/highway/${qAbbreviation}.PNG`} alt="quizImage" />
+        <div>
+          <img src={`/images/highway/${qAbbreviation}.PNG`} alt="quizImage" />
+          <img
+            src={`/images/license-plate/${qAbbreviation}.PNG`}
+            alt="quizImage"
+            className="blur"
+          />
+        </div>
       ) : (
         "waiting to start"
       )}

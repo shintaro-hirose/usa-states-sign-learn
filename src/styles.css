@@ -10,3 +10,7 @@ path:hover {
   opacity: 0.5;
   cursor: pointer;
 }
+
+.blur {
+  filter: blur(10px);
+}
