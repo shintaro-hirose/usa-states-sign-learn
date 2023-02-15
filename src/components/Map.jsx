@@ -18,7 +18,6 @@ export default function Map() {
   const [msg, setMsg] = useState("");
   const [qAbbreviation, setqAbbreviation] = useState(null);
   const [colorMap, setColorMap] = useState({});
-  const [memoColorMap, setMemoColorMap] = useState({});
   const [progNum, setProgNum] = useState(0);
   const [count, setCount] = useState(0);
 
@@ -54,33 +53,34 @@ export default function Map() {
     setqAbbreviation(quizArray[progNum].attributes.abbreviation);
   }, [quizArray, progNum]);
 
-  // 1回目は緑、2回目以降は黄色にする
+  // 1回目は緑、2回目以降は黄色にする, 正解したかを返す
   const fillWhenCorrect = (guess, failed) => {
     let fillColor = "#2ECC71";
     if (failed) fillColor = "#F4D03F";
-    let filled = false;
+
+    let correct = false;
+    let newColorMap = colorMap;
+
     highwayGroup.forEach((group) => {
       if (group.includes(guess)) {
         if (group.includes(qAbbreviation)) {
-          filled = true;
-          const newColorMap = colorMap;
+          correct = true;
           group.forEach((st) => {
             newColorMap[st] = { fill: fillColor };
           });
-          setColorMap(newColorMap);
         }
       }
     });
 
-    if (!filled) {
+    if (!correct) {
       if (guess === qAbbreviation) {
-        filled = true;
-        const newColorMap = colorMap;
+        correct = true;
         newColorMap[guess] = { fill: fillColor };
-        setColorMap(newColorMap);
       }
     }
-    return filled;
+    setColorMap(newColorMap);
+
+    return correct;
   };
 
   const startSession = () => {
@@ -123,26 +123,25 @@ export default function Map() {
   };
 
   const onMapClick = (e) => {
-    const { ongoing, end, correctCnt, falseCnt, failed } = condition;
-    if (end) return;
-    if (ongoing) {
-      const guessAbbreviation = e.target.dataset.name;
-      if (fillWhenCorrect(guessAbbreviation, failed)) {
-        setMsg(`It was ${quizArray[progNum].attributes.name}`);
+    const { ongoing, correctCnt, falseCnt, failed } = condition;
+    if (!ongoing) return;
 
-        if (failed) setCondition({ ...condition, failed: false });
-        else {
-          setCondition({
-            ...condition,
-            correctCnt: correctCnt + 1
-          });
-        }
-        goNextOrEnd();
-      } else {
-        setMsg(`${guessAbbreviation} Not Correct!`);
-        if (!failed) {
-          setCondition({ ...condition, falseCnt: falseCnt + 1, failed: true });
-        }
+    const guessAbbreviation = e.target.dataset.name;
+    if (fillWhenCorrect(guessAbbreviation, failed)) {
+      setMsg(`It was ${quizArray[progNum].attributes.name}`);
+
+      if (failed) setCondition({ ...condition, failed: false });
+      else {
+        setCondition({
+          ...condition,
+          correctCnt: correctCnt + 1
+        });
+      }
+      goNextOrEnd();
+    } else {
+      setMsg(`${guessAbbreviation} Not Correct!`);
+      if (!failed) {
+        setCondition({ ...condition, falseCnt: falseCnt + 1, failed: true });
       }
     }
   };
