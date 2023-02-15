@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import USAMap from "react-usa-map";
 import statesJson from "../states.json";
+import { highwayGroup } from "../util/highwayGroup";
 
 import Button from "@mui/material/Button";
 
@@ -9,7 +10,6 @@ export default function Map() {
   const [condition, setCondition] = useState({
     ongoing: false,
     end: false,
-    progNum: 0,
     correctCnt: 0,
     falseCnt: 0,
     failed: false,
@@ -20,6 +20,7 @@ export default function Map() {
   const [qAbbreviation, setqAbbreviation] = useState(null);
   const [aAbbreviation, setaAbbreviation] = useState(null);
   const [colorMap, setColorMap] = useState({});
+  const [progNum, setProgNum] = useState(0);
 
   const shuffle = ([...array]) => {
     for (let i = array.length - 1; i >= 0; i--) {
@@ -35,26 +36,61 @@ export default function Map() {
   }, [condition.end]);
 
   useEffect(() => {
-    setqAbbreviation(quizArray[condition.progNum].attributes.abbreviation);
-  }, [quizArray, condition.progNum]);
+    setqAbbreviation(quizArray[progNum].attributes.abbreviation);
+  }, [quizArray, progNum]);
+
+  const fillWhenCorrect = (s) => {
+    let filled = false;
+    highwayGroup.forEach((group) => {
+      if (group.includes(s)) {
+        if (group.includes(qAbbreviation)) {
+          filled = true;
+          const newColorMap = {};
+          group.forEach((st) => {
+            newColorMap[st] = { fill: "#2ECC71" };
+          });
+          setColorMap(newColorMap);
+        }
+      }
+    });
+
+    if (!filled) {
+      if (s === qAbbreviation) {
+        filled = true;
+        const newColorMap = {};
+        newColorMap[s] = { fill: "#2ECC71" };
+        setColorMap(newColorMap);
+      }
+    }
+    return filled;
+  };
+
+  const endQuiz = () => {
+    // TODO end task
+  };
+  const goNextOrEnd = () => {
+    let nextProgNum = progNum + 1;
+    if (nextProgNum == 50) {
+      nextProgNum = 0;
+      endQuiz();
+    }
+    setProgNum(nextProgNum);
+  };
 
   const mapHandler = (e) => {
-    const { ongoing, end, progNum, correctCnt, falseCnt, failed } = condition;
-    if (end || progNum >= 50) return;
+    const { ongoing, end, correctCnt, falseCnt, failed } = condition;
+    if (end) return;
     if (ongoing) {
       const guessAbbreviation = e.target.dataset.name;
       setaAbbreviation(guessAbbreviation);
-      const qName = quizArray[condition.progNum].attributes.name;
-      if (guessAbbreviation === qAbbreviation) {
-        setMsg(`You Got It Right! It was ${qName}.`);
-        const nextProgNum = progNum + 1;
-        if (failed)
-          setCondition({ ...condition, failed: false, progNum: nextProgNum });
+      if (fillWhenCorrect(guessAbbreviation)) {
+        setMsg("You Got It Right!");
+        goNextOrEnd();
+        if (failed) setCondition({ ...condition, failed: false });
         else {
           setCondition({
             ...condition,
-            correctCnt: correctCnt + 1,
-            progNum: nextProgNum
+            correctCnt: correctCnt + 1
           });
         }
       } else {
@@ -63,10 +99,20 @@ export default function Map() {
           setCondition({ ...condition, falseCnt: falseCnt + 1, failed: true });
         }
         const newColorMap = colorMap;
-        newColorMap[guessAbbreviation] = { fill: "#000" };
+        newColorMap[guessAbbreviation] = { fill: "#CD5C5C" };
         setColorMap(newColorMap);
-        console.log(newColorMap);
       }
+    }
+  };
+  const onSkip = () => {
+    if (condition.ongoing) {
+      fillWhenCorrect(qAbbreviation);
+      const tmsg = `The answer was ${quizArray[progNum].attributes.name}`;
+      setMsg(tmsg);
+      setaAbbreviation(qAbbreviation);
+      const newFalseCnt = condition.falseCnt + 1;
+      setCondition({ ...condition, falseCnt: newFalseCnt });
+      goNextOrEnd();
     }
   };
 
@@ -96,6 +142,7 @@ export default function Map() {
       {`Missed: ${condition.falseCnt}`}
       <br></br>
       <Button onClick={startSession}>Start</Button>
+      <Button onClick={onSkip}>Skip</Button>
     </div>
   );
 }
