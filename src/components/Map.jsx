@@ -39,15 +39,18 @@ export default function Map() {
     setqAbbreviation(quizArray[progNum].attributes.abbreviation);
   }, [quizArray, progNum]);
 
-  const fillWhenCorrect = (s) => {
+  // 1回目は緑、2回目以降は黄色にする
+  const fillWhenCorrect = (guess, failed) => {
+    let fillColor = "#2ECC71";
+    if (failed) fillColor = "#F4D03F";
     let filled = false;
     highwayGroup.forEach((group) => {
-      if (group.includes(s)) {
+      if (group.includes(guess)) {
         if (group.includes(qAbbreviation)) {
           filled = true;
-          const newColorMap = {};
+          const newColorMap = colorMap;
           group.forEach((st) => {
-            newColorMap[st] = { fill: "#2ECC71" };
+            newColorMap[st] = { fill: fillColor };
           });
           setColorMap(newColorMap);
         }
@@ -55,10 +58,10 @@ export default function Map() {
     });
 
     if (!filled) {
-      if (s === qAbbreviation) {
+      if (guess === qAbbreviation) {
         filled = true;
-        const newColorMap = {};
-        newColorMap[s] = { fill: "#2ECC71" };
+        const newColorMap = colorMap;
+        newColorMap[guess] = { fill: fillColor };
         setColorMap(newColorMap);
       }
     }
@@ -70,7 +73,7 @@ export default function Map() {
   };
   const goNextOrEnd = () => {
     let nextProgNum = progNum + 1;
-    if (nextProgNum == 50) {
+    if (nextProgNum === 50) {
       nextProgNum = 0;
       endQuiz();
     }
@@ -83,7 +86,7 @@ export default function Map() {
     if (ongoing) {
       const guessAbbreviation = e.target.dataset.name;
       setaAbbreviation(guessAbbreviation);
-      if (fillWhenCorrect(guessAbbreviation)) {
+      if (fillWhenCorrect(guessAbbreviation, failed)) {
         setMsg("You Got It Right!");
         goNextOrEnd();
         if (failed) setCondition({ ...condition, failed: false });
@@ -98,20 +101,17 @@ export default function Map() {
         if (!failed) {
           setCondition({ ...condition, falseCnt: falseCnt + 1, failed: true });
         }
-        const newColorMap = colorMap;
-        newColorMap[guessAbbreviation] = { fill: "#CD5C5C" };
-        setColorMap(newColorMap);
       }
     }
   };
   const onSkip = () => {
     if (condition.ongoing) {
-      fillWhenCorrect(qAbbreviation);
+      fillWhenCorrect(qAbbreviation, true);
       const tmsg = `The answer was ${quizArray[progNum].attributes.name}`;
       setMsg(tmsg);
       setaAbbreviation(qAbbreviation);
       const newFalseCnt = condition.falseCnt + 1;
-      setCondition({ ...condition, falseCnt: newFalseCnt });
+      setCondition({ ...condition, falseCnt: newFalseCnt, failed: false });
       goNextOrEnd();
     }
   };
