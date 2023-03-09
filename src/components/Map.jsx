@@ -232,6 +232,7 @@ export default function Map() {
 
   return (
     <div>
+      <Typography variant="h3">US 50 states Sign/Plate Quiz</Typography>
       <Box sx={{ flexGrow: 1 }}>
         <Grid container spacing={2}>
           <Grid xs={4}>
